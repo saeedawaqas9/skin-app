@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with personalized skincare preferences and onboarding status",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated user identifier" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "email": { "type": "string", "description": "User email address" },
+        "skinGoals": { "type": "array", "description": "Target skincare goals" },
+        "experienceLevel": { "type": "string", "description": "Beginner, Intermediate, Advanced" },
+        "sensitivities": { "type": "array", "description": "Known sensitivities or allergies" },
+        "budgetTier": { "type": "string", "description": "Affordable, Mid-Range, Luxury" },
+        "currency": { "type": "string", "description": "Preferred display currency" },
+        "fragrancePreference": { "type": "string", "description": "Fragrance-free or scented" },
+        "routineComplexity": { "type": "string", "description": "Minimal, Moderate, Comprehensive" },
+        "isOnboardingDone": { "type": "boolean", "description": "Whether onboarding has been completed" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp via serverTimestamp()" }
+      },
+      "required": ["userId", "isOnboardingDone", "createdAt"]
+    },
+    "RoutineStep": {
+      "title": "RoutineStep",
+      "description": "Personalized skincare routine step in AM or PM routine",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated user identifier" },
+        "routineType": { "type": "string", "enum": ["MORNING", "EVENING"], "description": "AM or PM" },
+        "stepNumber": { "type": "integer", "description": "Sequence index" },
+        "category": { "type": "string", "description": "Cleanser, Toner, Serum, Moisturizer, Sunscreen, etc." },
+        "customTitle": { "type": "string", "description": "Step or product title" },
+        "purpose": { "type": "string", "description": "What this step does" },
+        "usageTip": { "type": "string", "description": "How and when to apply" },
+        "isCompletedToday": { "type": "boolean", "description": "Check-off state for today" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp via serverTimestamp()" }
+      },
+      "required": ["userId", "routineType", "stepNumber", "category", "customTitle", "createdAt"]
+    },
+    "ShelfProduct": {
+      "title": "ShelfProduct",
+      "description": "Product saved to user beauty shelf or vanity",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated user identifier" },
+        "name": { "type": "string", "description": "Product name" },
+        "brand": { "type": "string", "description": "Brand name" },
+        "category": { "type": "string", "description": "Product category" },
+        "notes": { "type": "string", "description": "Personal notes" },
+        "paoMonths": { "type": "integer", "description": "Period after opening in months" },
+        "routineAssignment": { "type": "string", "description": "Morning, Evening, Both, or Unassigned" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp via serverTimestamp()" }
+      },
+      "required": ["userId", "name", "brand", "category", "createdAt"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "Daily skincare observation log and streak tracker",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated user identifier" },
+        "dateString": { "type": "string", "description": "YYYY-MM-DD date key" },
+        "morningCompleted": { "type": "boolean", "description": "Did complete morning routine" },
+        "eveningCompleted": { "type": "boolean", "description": "Did complete evening routine" },
+        "skinComfort": { "type": "integer", "description": "1 to 5 comfort rating" },
+        "hydrationLevel": { "type": "integer", "description": "1 to 5 hydration rating" },
+        "irritationLevel": { "type": "integer", "description": "1 to 5 irritation score" },
+        "breakoutReported": { "type": "boolean", "description": "Whether breakout occurred" },
+        "notes": { "type": "string", "description": "User notes or observations" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp via serverTimestamp()" }
+      },
+      "required": ["userId", "dateString", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Root user profile document"
+    },
+    "/users/{userId}/routine_steps/{stepId}": {
+      "schema": { "$ref": "#/entities/RoutineStep" },
+      "description": "Personalized morning and evening routine steps"
+    },
+    "/users/{userId}/shelf_products/{productId}": {
+      "schema": { "$ref": "#/entities/ShelfProduct" },
+      "description": "User beauty vanity and product collection"
+    },
+    "/users/{userId}/journal_entries/{entryId}": {
+      "schema": { "$ref": "#/entities/JournalEntry" },
+      "description": "Daily skincare routine tracking and observations"
+    }
+  }
+}

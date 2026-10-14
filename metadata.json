@@ -1,0 +1,6 @@
+{
+  "name": "SkinRoutine AI",
+  "description": "Personalized skincare routine builder, ingredient intelligence, product catalog, and contextual AI beauty companion.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

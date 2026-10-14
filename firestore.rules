@@ -1,0 +1,164 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.isOnboardingDone is bool &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 100)) &&
+             (!('skinGoals' in data) || (data.skinGoals is list && data.skinGoals.size() <= 15)) &&
+             (!('experienceLevel' in data) || (data.experienceLevel is string && data.experienceLevel.size() <= 50)) &&
+             (!('sensitivities' in data) || (data.sensitivities is list && data.sensitivities.size() <= 20)) &&
+             (!('budgetTier' in data) || (data.budgetTier is string && data.budgetTier.size() <= 50)) &&
+             (!('currency' in data) || (data.currency is string && data.currency.size() <= 10)) &&
+             (!('fragrancePreference' in data) || (data.fragrancePreference is string && data.fragrancePreference.size() <= 50)) &&
+             (!('routineComplexity' in data) || (data.routineComplexity is string && data.routineComplexity.size() <= 50));
+    }
+
+    function isValidRoutineStep(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.routineType is string && (data.routineType == 'MORNING' || data.routineType == 'EVENING') &&
+             data.stepNumber is int && data.stepNumber >= 0 && data.stepNumber <= 50 &&
+             data.category is string && data.category.size() <= 50 &&
+             data.customTitle is string && data.customTitle.size() <= 150 &&
+             (!('purpose' in data) || (data.purpose is string && data.purpose.size() <= 500)) &&
+             (!('usageTip' in data) || (data.usageTip is string && data.usageTip.size() <= 500)) &&
+             (!('isCompletedToday' in data) || data.isCompletedToday is bool);
+    }
+
+    function isValidShelfProduct(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+             data.brand is string && data.brand.size() <= 100 &&
+             data.category is string && data.category.size() <= 50 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500)) &&
+             (!('paoMonths' in data) || (data.paoMonths is int && data.paoMonths >= 0 && data.paoMonths <= 60)) &&
+             (!('routineAssignment' in data) || (data.routineAssignment is string && data.routineAssignment.size() <= 50));
+    }
+
+    function isValidJournalEntry(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.dateString is string && data.dateString.size() <= 20 &&
+             (!('morningCompleted' in data) || data.morningCompleted is bool) &&
+             (!('eveningCompleted' in data) || data.eveningCompleted is bool) &&
+             (!('skinComfort' in data) || (data.skinComfort is int && data.skinComfort >= 0 && data.skinComfort <= 5)) &&
+             (!('hydrationLevel' in data) || (data.hydrationLevel is int && data.hydrationLevel >= 0 && data.hydrationLevel <= 5)) &&
+             (!('irritationLevel' in data) || (data.irritationLevel is int && data.irritationLevel >= 0 && data.irritationLevel <= 5)) &&
+             (!('breakoutReported' in data) || data.breakoutReported is bool) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // User profile and subcollections
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+
+      allow create: if isOwner(userId) && isValidId(userId) &&
+                       request.resource.data.userId == userId &&
+                       request.resource.data.createdAt is timestamp &&
+                       request.resource.data.createdAt <= request.time &&
+                       isValidUserProfile(request.resource.data);
+
+      allow update: if isOwner(userId) && isValidId(userId) &&
+                       request.resource.data.userId == resource.data.userId &&
+                       request.resource.data.createdAt == resource.data.createdAt &&
+                       request.resource.data.updatedAt is timestamp &&
+                       request.resource.data.updatedAt <= request.time &&
+                       isValidUserProfile(request.resource.data) &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                         'displayName', 'email', 'skinGoals', 'experienceLevel', 'sensitivities',
+                         'budgetTier', 'currency', 'fragrancePreference', 'routineComplexity',
+                         'isOnboardingDone', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId);
+
+      match /routine_steps/{stepId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(stepId) &&
+                         request.resource.data.userId == userId &&
+                         request.resource.data.createdAt is timestamp &&
+                         request.resource.data.createdAt <= request.time &&
+                         isValidRoutineStep(request.resource.data);
+
+        allow update: if isOwner(userId) && isValidId(stepId) &&
+                         request.resource.data.userId == resource.data.userId &&
+                         request.resource.data.createdAt == resource.data.createdAt &&
+                         request.resource.data.updatedAt is timestamp &&
+                         request.resource.data.updatedAt <= request.time &&
+                         isValidRoutineStep(request.resource.data) &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                           'routineType', 'stepNumber', 'category', 'customTitle', 'purpose',
+                           'usageTip', 'isCompletedToday', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId);
+      }
+
+      match /shelf_products/{productId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(productId) &&
+                         request.resource.data.userId == userId &&
+                         request.resource.data.createdAt is timestamp &&
+                         request.resource.data.createdAt <= request.time &&
+                         isValidShelfProduct(request.resource.data);
+
+        allow update: if isOwner(userId) && isValidId(productId) &&
+                         request.resource.data.userId == resource.data.userId &&
+                         request.resource.data.createdAt == resource.data.createdAt &&
+                         request.resource.data.updatedAt is timestamp &&
+                         request.resource.data.updatedAt <= request.time &&
+                         isValidShelfProduct(request.resource.data) &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                           'name', 'brand', 'category', 'notes', 'paoMonths',
+                           'routineAssignment', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId);
+      }
+
+      match /journal_entries/{entryId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(entryId) &&
+                         request.resource.data.userId == userId &&
+                         request.resource.data.createdAt is timestamp &&
+                         request.resource.data.createdAt <= request.time &&
+                         isValidJournalEntry(request.resource.data);
+
+        allow update: if isOwner(userId) && isValidId(entryId) &&
+                         request.resource.data.userId == resource.data.userId &&
+                         request.resource.data.createdAt == resource.data.createdAt &&
+                         request.resource.data.updatedAt is timestamp &&
+                         request.resource.data.updatedAt <= request.time &&
+                         isValidJournalEntry(request.resource.data) &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                           'dateString', 'morningCompleted', 'eveningCompleted', 'skinComfort',
+                           'hydrationLevel', 'irritationLevel', 'breakoutReported', 'notes', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}
